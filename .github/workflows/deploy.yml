@@ -1,0 +1,75 @@
+name: Build & deploy Tech Deck
+
+# When this runs:
+#   • every 3 hours, automatically, on GitHub's servers (your computer can be off)
+#     To change the pace, edit the cron below: "0 * * * *" = hourly,
+#     "*/15 * * * *" = every 15 minutes.
+#   • whenever you push a change to the main branch
+#   • whenever you click "Run workflow" on the Actions tab (manual refresh)
+on:
+  schedule:
+    - cron: "0 */3 * * *"
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Let the workflow publish to GitHub Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# If a run is already going, let the newest one win.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install libraries
+        run: pip install -r requirements.txt
+
+      # Carry AI summaries between runs so each refresh only pays to summarize
+      # genuinely new paywalled stories, not the same ones over and over.
+      - name: Restore AI-summary cache
+        uses: actions/cache@v4
+        with:
+          path: .cache
+          key: ai-summaries-${{ github.run_id }}
+          restore-keys: |
+            ai-summaries-
+
+      - name: Build the site (fetch feeds -> public/index.html)
+        run: python build.py
+        env:
+          # Add an ANTHROPIC_API_KEY repo secret to switch on AI summaries for
+          # paywalled cards. Without it the build still works — those cards show
+          # the feed's own teaser instead.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Package the site for Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
