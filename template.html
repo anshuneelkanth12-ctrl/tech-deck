@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tech Deck — Anshu's</title>
+<meta name="description" content="Anshu's Tech Deck — auto-updating tech news: smartphones, India, AI & tech.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-1:#EEF1F6;
+    --bg-2:#E4E9F1;
+    --surface:rgba(255,255,255,.62);      /* glass fill */
+    --surface-strong:rgba(255,255,255,.78);
+    --glass-border:rgba(255,255,255,.75);
+    --hairline:rgba(24,38,64,.10);
+    --text:#18212E;
+    --dim:#54616F;
+    --faint:#8B96A4;
+    --amber:#F0AE1F;                       /* bright gold — active tab & lock fill */
+    --amber-hi:#F8C24A;                    /* lighter gold — gradient highlight */
+    --amber-ink:#9E6B00;                   /* deep gold — accent text, links, focus */
+    --cat-phone:#9E6B00;
+    --cat-india:#0FA36B;
+    --cat-ai:#5B5FE0;
+    --cat-general:#64748B;
+    --radius:16px;
+    --glass-blur:blur(18px) saturate(180%);
+    --card-blur:blur(11px) saturate(165%);
+    --glass-shadow:0 6px 22px rgba(20,35,60,.10), inset 0 1px 0 rgba(255,255,255,.75);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:auto}   /* the "back to top" scroll is animated in JS for consistency across browsers */
+  body{
+    color:var(--text);
+    font-family:'IBM Plex Sans',system-ui,sans-serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    background:
+      radial-gradient(58% 55% at 12% 6%, rgba(240,174,31,.18), transparent 60%),
+      radial-gradient(55% 55% at 92% 12%, rgba(91,95,224,.11), transparent 60%),
+      radial-gradient(60% 60% at 72% 96%, rgba(15,163,107,.09), transparent 60%),
+      linear-gradient(180deg, var(--bg-1), var(--bg-2));
+    background-attachment:fixed;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace}
+  a{color:inherit;text-decoration:none}
+
+  /* ---- top bar (glass) ---- */
+  header{
+    position:sticky;top:0;z-index:20;
+    background:rgba(255,255,255,.55);
+    backdrop-filter:var(--glass-blur);
+    -webkit-backdrop-filter:var(--glass-blur);
+    border-bottom:1px solid rgba(255,255,255,.6);
+    box-shadow:0 1px 0 rgba(24,38,64,.04), 0 10px 30px rgba(24,38,64,.05);
+  }
+  .bar{
+    max-width:1240px;margin:0 auto;
+    padding:16px 24px;
+    display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;
+  }
+  .brand{
+    display:flex;flex-direction:column;gap:2px;line-height:1.1;
+    background:none;border:none;padding:0;cursor:pointer;text-align:left;font:inherit;color:inherit;
+    border-radius:10px;
+  }
+  .brand:focus-visible{outline:2px solid var(--amber-ink);outline-offset:4px}
+  .brand .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--faint);
+  }
+  .brand .word{
+    font-family:'Space Grotesk',sans-serif;font-weight:700;
+    font-size:26px;letter-spacing:-.01em;
+    display:flex;align-items:baseline;gap:8px;
+  }
+  .brand .word b{color:var(--amber-ink);font-weight:700}
+  .brand:hover .word{opacity:.82}
+  .tick{width:9px;height:9px;border-radius:50%;background:var(--amber);display:inline-block;position:relative;top:-2px}
+
+  .status{display:flex;align-items:center;gap:18px}
+  .live{
+    display:flex;align-items:center;gap:9px;
+    font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--dim);
+    letter-spacing:.04em;
+  }
+  .pulse{width:8px;height:8px;border-radius:50%;background:var(--cat-india);position:relative}
+  @media (prefers-reduced-motion:no-preference){
+    .pulse::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:1px solid var(--cat-india);animation:ring 2.2s ease-out infinite}
+    .tick{animation:blink 2.6s ease-in-out infinite}
+  }
+  @keyframes ring{0%{transform:scale(.6);opacity:.9}100%{transform:scale(1.9);opacity:0}}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+
+  /* glass refresh button */
+  .refresh{
+    font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text);
+    border:1px solid var(--glass-border);
+    background:rgba(255,255,255,.5);
+    backdrop-filter:var(--glass-blur);
+    -webkit-backdrop-filter:var(--glass-blur);
+    box-shadow:var(--glass-shadow);
+    padding:9px 15px;border-radius:12px;cursor:pointer;letter-spacing:.03em;
+    transition:border-color .2s,background .2s,color .2s,transform .2s;
+  }
+  .refresh:hover{border-color:var(--amber-ink);color:var(--amber-ink);background:rgba(255,255,255,.8);transform:translateY(-1px)}
+  .refresh:active{transform:translateY(0)}
+  .refresh:focus-visible{outline:2px solid var(--amber-ink);outline-offset:2px}
+
+  /* ---- filter row ---- */
+  .controls{
+    max-width:1240px;margin:0 auto;
+    padding:22px 24px 6px;
+    display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  }
+  .tabs{display:flex;gap:9px;flex-wrap:wrap}
+  /* glass category pills */
+  .tab{
+    font-family:'IBM Plex Mono',monospace;font-size:12.5px;letter-spacing:.03em;
+    color:var(--dim);
+    background:rgba(255,255,255,.45);
+    border:1px solid var(--glass-border);
+    backdrop-filter:var(--glass-blur);
+    -webkit-backdrop-filter:var(--glass-blur);
+    box-shadow:var(--glass-shadow);
+    padding:9px 16px;border-radius:999px;cursor:pointer;
+    transition:all .18s ease;display:flex;align-items:center;gap:7px;
+  }
+  .tab:hover{color:var(--text);border-color:rgba(24,38,64,.18);background:rgba(255,255,255,.7)}
+  .tab:focus-visible{outline:2px solid var(--amber-ink);outline-offset:2px}
+  .tab[aria-pressed="true"]{
+    color:#231a02;
+    background:linear-gradient(180deg,var(--amber-hi),var(--amber));
+    border-color:rgba(255,255,255,.5);
+    box-shadow:0 6px 18px rgba(240,174,31,.4), inset 0 1px 0 rgba(255,255,255,.6);
+    font-weight:600;
+  }
+  .tab .dot{width:7px;height:7px;border-radius:50%}
+  .count{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--faint);letter-spacing:.03em}
+
+  /* ---- grid ---- */
+  main{max-width:1240px;margin:0 auto;padding:18px 24px 60px}
+  .lead{margin-bottom:22px}
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+    gap:18px;
+  }
+  .empty{
+    grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--faint);
+    font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.03em;
+  }
+
+  /* glass article cards */
+  .card{
+    background:var(--surface);
+    border:1px solid var(--glass-border);
+    border-radius:var(--radius);
+    backdrop-filter:var(--card-blur);
+    -webkit-backdrop-filter:var(--card-blur);
+    box-shadow:0 6px 22px rgba(20,35,60,.08), inset 0 1px 0 rgba(255,255,255,.7);
+    overflow:hidden;
+    display:flex;flex-direction:column;
+    position:relative;
+    transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+  }
+  .card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--catcolor,var(--hairline));z-index:2}
+  .card:hover{transform:translateY(-3px);box-shadow:0 16px 36px rgba(20,35,60,.15), inset 0 1px 0 rgba(255,255,255,.85);border-color:rgba(255,255,255,.95)}
+  .card:focus-within{border-color:var(--amber-ink)}
+
+  .thumb{
+    aspect-ratio:16/9;width:100%;position:relative;
+    background:var(--catcolor);
+    background-image:
+      radial-gradient(120% 120% at 15% 10%, rgba(255,255,255,.35), transparent 55%),
+      linear-gradient(140deg, var(--catcolor), rgba(24,33,46,.55) 135%);
+    overflow:hidden;
+  }
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block;position:relative;z-index:1}
+  .thumb .cover{
+    position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:9px;padding:18px;text-align:center;user-select:none;
+  }
+  .thumb .cover::before{
+    content:"";position:absolute;inset:0;
+    background-image:radial-gradient(rgba(255,255,255,.16) 1px, transparent 1.4px);
+    background-size:15px 15px;opacity:.55;
+  }
+  .cover-cat{
+    position:relative;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.2em;
+    text-transform:uppercase;color:rgba(255,255,255,.85);
+  }
+  .cover-src{
+    position:relative;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:25px;
+    letter-spacing:-.01em;color:#fff;line-height:1.12;text-shadow:0 1px 12px rgba(0,0,0,.22);
+  }
+  .badge{
+    position:absolute;bottom:10px;left:10px;z-index:3;
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.05em;
+    background:rgba(16,22,32,.72);color:#fff;
+    padding:4px 9px;border-radius:6px;
+    backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.15);
+  }
+  .flag{
+    position:absolute;top:10px;right:10px;z-index:3;
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#fff;
+    background:rgba(16,22,32,.72);padding:4px 8px;border-radius:6px;
+    backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  }
+  .lock{
+    position:absolute;top:10px;left:10px;z-index:3;
+    font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.04em;
+    background:linear-gradient(180deg,var(--amber-hi),var(--amber));color:#231a02;font-weight:700;
+    padding:4px 8px;border-radius:6px;display:flex;align-items:center;gap:5px;
+    box-shadow:0 3px 10px rgba(240,174,31,.45), inset 0 1px 0 rgba(255,255,255,.5);
+  }
+
+  .body{padding:14px 15px 16px;display:flex;flex-direction:column;gap:8px;flex:1}
+  .meta{display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--faint)}
+  .meta .cat{color:var(--catcolor);font-weight:600}
+  h3{
+    font-family:'Space Grotesk',sans-serif;font-weight:600;
+    font-size:16.5px;line-height:1.28;letter-spacing:-.005em;color:var(--text);
+  }
+  .dek{font-size:13.5px;color:var(--dim);line-height:1.45}
+  .paywall-note{
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.02em;
+    color:var(--amber-ink);font-weight:500;display:flex;align-items:center;gap:6px;margin-top:2px;
+  }
+  .read{
+    margin-top:auto;padding-top:4px;
+    font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--amber-ink);font-weight:500;
+    display:inline-flex;align-items:center;gap:6px;opacity:0;transform:translateX(-4px);
+    transition:opacity .18s ease,transform .18s ease;
+  }
+  .card:hover .read,.card:focus-within .read{opacity:1;transform:translateX(0)}
+  .stretch{position:absolute;inset:0;z-index:4}
+  .stretch:focus-visible{outline:2px solid var(--amber-ink);outline-offset:-3px;border-radius:var(--radius)}
+
+  /* lead card variant */
+  .lead .card{flex-direction:row}
+  .lead .thumb{width:46%;aspect-ratio:auto;min-height:260px}
+  .lead .body{padding:26px 28px;justify-content:center;gap:12px}
+  .lead h3{font-size:27px;line-height:1.14}
+  .lead .dek{font-size:15px}
+  .lead .read{opacity:1;transform:none;font-size:13px}
+
+  footer{
+    max-width:1240px;margin:0 auto;padding:26px 24px 50px;
+    border-top:1px solid var(--hairline);
+    display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;
+    font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--faint);letter-spacing:.03em;
+  }
+
+  @media (max-width:720px){
+    .lead .card{flex-direction:column}
+    .lead .thumb{width:100%;aspect-ratio:16/9;min-height:0}
+    .lead .body{padding:20px}
+    .lead h3{font-size:22px}
+    .brand .word{font-size:22px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bar">
+    <button class="brand" id="toTop" aria-label="Anshu's Tech Deck — back to top">
+      <span class="eyebrow">Anshu's</span>
+      <span class="word">Tech<b>Deck</b><span class="tick"></span></span>
+    </button>
+    <div class="status">
+      <span class="live"><span class="pulse"></span><span id="updated">UPDATED JUST NOW</span></span>
+      <button class="refresh" onclick="location.reload()">↻ REFRESH</button>
+    </div>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="tabs" id="tabs">
+    <button class="tab" data-filter="all" aria-pressed="true">ALL</button>
+    <button class="tab" data-filter="phone" aria-pressed="false"><span class="dot" style="background:var(--cat-phone)"></span>SMARTPHONES</button>
+    <button class="tab" data-filter="india" aria-pressed="false"><span class="dot" style="background:var(--cat-india)"></span>INDIA</button>
+    <button class="tab" data-filter="ai" aria-pressed="false"><span class="dot" style="background:var(--cat-ai)"></span>AI &amp; TECH</button>
+  </div>
+  <span class="count" id="count"></span>
+</div>
+
+<main>
+  <section class="lead" id="lead"></section>
+  <section class="grid" id="grid"></section>
+</main>
+
+<footer>
+  <span id="foot-sources">__SOURCE_COUNT__ SOURCES · INCL. TECHMEME + HACKER NEWS FOR DISCOVERY</span>
+  <span>AUTO-REFRESHES EVERY ~3 HOURS · CLICK ANY CARD TO READ IN FULL</span>
+</footer>
+
+<script>
+const CAT = {
+  phone:  {name:"SMARTPHONES", color:"var(--cat-phone)"},
+  india:  {name:"INDIA",       color:"var(--cat-india)"},
+  ai:     {name:"AI & TECH",   color:"var(--cat-ai)"},
+  general:{name:"TECH",        color:"var(--cat-general)"}
+};
+
+// Story data — injected fresh by build.py on every run.
+const STORIES = __STORIES__;
+const BUILD_ISO = "__BUILD_ISO__";
+
+function ago(iso){
+  const then = new Date(iso).getTime();
+  if(isNaN(then)) return "";
+  const s = Math.max(0,(Date.now()-then)/1000);
+  if(s < 45) return "JUST NOW";
+  const m = Math.floor(s/60); if(m < 1) return "JUST NOW";
+  if(m < 60) return m + " MIN AGO";
+  const h = Math.floor(m/60); if(h < 24) return h + " H AGO";
+  const d = Math.floor(h/24); return d + (d===1 ? " DAY AGO" : " DAYS AGO");
+}
+
+function esc(str){
+  return (str||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function cardHTML(s){
+  const c = CAT[s.cat] || CAT.general;
+  const flag = s.india ? `<span class="flag">🇮🇳 INDIA</span>` : '';
+  const lock = s.paywall ? `<span class="lock">🔒 SUBSCRIBER-ONLY</span>` : '';
+  const badge = s.img ? `<span class="badge">${esc(s.source)}</span>` : '';
+  const thumbInner = s.img
+    ? `<img src="${esc(s.img)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`
+    : `<div class="cover"><span class="cover-cat">${c.name}</span><span class="cover-src">${esc(s.source)}</span></div>`;
+  const dek = s.summary ? `<p class="dek">${esc(s.summary)}</p>` : '';
+  const note = s.paywall
+    ? `<span class="paywall-note">${s.ai ? 'AI SUMMARY' : 'TAILORED SUMMARY'} · FULL STORY NEEDS A SUBSCRIPTION</span>` : '';
+  return `
+  <article class="card" data-cat="${s.cat}" data-india="${!!s.india}" style="--catcolor:${c.color}">
+    <div class="thumb">
+      ${thumbInner}
+      ${badge}
+      ${flag}${lock}
+    </div>
+    <div class="body">
+      <div class="meta"><span class="cat">${c.name}</span><span>·</span><span>${ago(s.ts)}</span></div>
+      <h3>${esc(s.title)}</h3>
+      ${dek}
+      ${note}
+      <span class="read">READ IN FULL →</span>
+    </div>
+    <a class="stretch" href="${esc(s.url)}" target="_blank" rel="noopener" aria-label="${esc(s.title)}"></a>
+  </article>`;
+}
+
+const grid = document.getElementById('grid');
+const lead = document.getElementById('lead');
+const countEl = document.getElementById('count');
+let current = 'all';
+
+function inFilter(s, f){
+  if(f === 'all') return true;
+  if(f === 'india') return s.cat === 'india' || s.india;
+  return s.cat === f;
+}
+
+function render(){
+  const leadStory = STORIES.find(s => s.lead);
+  const rest = STORIES.filter(s => !s.lead);
+
+  lead.innerHTML = (current === 'all' && leadStory) ? cardHTML(leadStory) : '';
+
+  const pool = (current === 'all') ? rest : STORIES.filter(s => inFilter(s, current));
+  grid.innerHTML = pool.length
+    ? pool.map(cardHTML).join('')
+    : `<div class="empty">No stories in this category right now — check back after the next refresh.</div>`;
+
+  const total = (current === 'all') ? STORIES.length : pool.length;
+  countEl.textContent = total + (total === 1 ? ' STORY' : ' STORIES');
+}
+
+document.getElementById('tabs').addEventListener('click', e => {
+  const btn = e.target.closest('.tab');
+  if(!btn) return;
+  current = btn.dataset.filter;
+  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-pressed', t === btn));
+  render();
+});
+
+// Clicking the brand smoothly scrolls back to the top.
+// Driven by requestAnimationFrame (instant per-frame scrolls) so it behaves
+// identically in every browser, rather than relying on native smooth scroll.
+document.getElementById('toTop').addEventListener('click', () => {
+  const start = window.scrollY || document.documentElement.scrollTop;
+  if(start <= 0) return;
+  const duration = 500;
+  const t0 = performance.now();
+  const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+  const frame = now => {
+    const p = Math.min(1, (now - t0) / duration);
+    window.scrollTo(0, start * (1 - easeOutCubic(p)));
+    if(p < 1) requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+  // Safety net: guarantee we land at the top even if animation frames are throttled.
+  setTimeout(() => window.scrollTo(0, 0), duration + 90);
+});
+
+document.getElementById('updated').textContent = 'UPDATED ' + ago(BUILD_ISO);
+render();
+</script>
+</body>
+</html>
