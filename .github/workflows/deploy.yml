@@ -3,7 +3,7 @@ name: Build & deploy Tech Deck
 # When this runs:
 #   • every 3 hours, automatically, on GitHub's servers (your computer can be off)
 #     To change the pace, edit the cron below: "0 * * * *" = hourly,
-#     "*/15 * * * *" = every 15 minutes.
+#     "7,22,37,52 * * * *" = every 15 minutes.
 #   • whenever you push a change to the main branch
 #   • whenever you click "Run workflow" on the Actions tab (manual refresh)
 on:
@@ -22,17 +22,18 @@ permissions:
 # If a run is already going, let the newest one win.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - name: Get the code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
@@ -43,10 +44,10 @@ jobs:
       # Carry AI summaries between runs so each refresh only pays to summarize
       # genuinely new paywalled stories, not the same ones over and over.
       - name: Restore AI-summary cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .cache
-          key: ai-summaries-${{ github.run_id }}
+          key: ai-summaries-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             ai-summaries-
 
@@ -59,7 +60,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Package the site for Pages
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: public
 
@@ -72,4 +73,21 @@ jobs:
     steps:
       - name: Publish to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
+
+  # GitHub switches off scheduled workflows in public repos after 60 days with
+  # no commits — and the scheduled runs themselves don't count as activity.
+  # That is exactly what stopped this site on 19 Sep 2026. Re-enabling the
+  # workflow through GitHub's API resets that 60-day clock, so doing it on every
+  # scheduled run means the schedule never lapses (no dummy commits needed).
+  keepalive:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Keep the schedule switched on
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method PUT "repos/${{ github.repository }}/actions/workflows/deploy.yml/enable"
