@@ -6,8 +6,8 @@ as image-rich glass cards on a light background, and lets you click any card to
 read the full article at its source. Paywalled sources (Financial Times) show a
 short **tailored summary** so you get the gist without a login.
 
-It rebuilds itself **every 3 hours on GitHub's free servers** — your computer
-does not need to be on.
+It rebuilds itself **automatically throughout the day on GitHub's free
+servers** — your computer does not need to be on.
 
 ---
 
@@ -18,7 +18,7 @@ does not need to be on.
 | `build.py` | The engine. Fetches feeds, sorts + de-duplicates stories, finds images, and writes the web page. **Edit the top of this file to add/remove sources.** |
 | `template.html` | The look of the page (colours, fonts, layout). Edit this to restyle. |
 | `requirements.txt` | The Python libraries `build.py` needs. |
-| `.github/workflows/deploy.yml` | The automation that rebuilds + republishes the site every 3 hours on GitHub. |
+| `.github/workflows/deploy.yml` | The automation that rebuilds + republishes the site on a schedule on GitHub, and keeps that schedule from being switched off. |
 | `public/index.html` | The finished page (created by `build.py`). This is what visitors see. |
 
 ---
@@ -66,7 +66,7 @@ Your GitHub account is **anshuneelkanth12-ctrl**, so the steps below use that.
    **Run workflow**. Wait ~1–2 minutes for the green tick.
 5. **Your site is live** at
    `https://anshuneelkanth12-ctrl.github.io/tech-deck/`.
-   Bookmark it. From now on it refreshes automatically every 3 hours.
+   Bookmark it. From now on it refreshes automatically throughout the day.
 
 > If a step looks different or shows an error, tell Claude Code exactly what you
 > see on screen and it will walk you through it.
@@ -121,16 +121,17 @@ recovered with extra work.
 ## How the auto-update works
 
 The GitHub Action in `.github/workflows/deploy.yml` runs `build.py` on GitHub's
-servers **every 3 hours** (and whenever you push a change, or click *Run
+servers **on a schedule** (and whenever you push a change, or click *Run
 workflow*). Each run fetches the newest stories and republishes the page, so
 opening your bookmarked URL always shows current news — no server for you to
 manage, and your computer can be off.
 
-To change the frequency, edit the `cron` line in that file — `"0 * * * *"` for
-hourly, `"*/15 * * * *"` for every 15 minutes. Note that GitHub's free scheduler
-is best-effort: during busy periods a scheduled run can be delayed by several
-minutes or occasionally skipped, so a short interval is a target, not a
-guarantee.
+The schedule asks for every 15 minutes, but GitHub's free scheduler is
+best-effort: it delays runs when busy and quietly drops some. From July to
+September 2026 it managed roughly 14 runs a day, not the 96 requested. To change
+the pace, edit the `cron` line in that file — e.g. `"7 * * * *"` for hourly.
+Keep the minutes off round numbers like :00, which GitHub says is its busiest
+moment.
 
 **AI-summary cost & caching:** paywalled (Financial Times) cards get an AI
 summary via the Anthropic API, which is pay-as-you-go. Summaries are cached (via
@@ -138,3 +139,25 @@ summary via the Anthropic API, which is pay-as-you-go. Summaries are cached (via
 *new* stories rather than re-writing the same ones every refresh. This keeps the
 bill small and matters more the faster you refresh. Switch `AI_MODEL` in
 `build.py` to `"claude-haiku-4-5"` for the lowest cost.
+
+---
+
+## If the site stops updating
+
+The dot next to **UPDATED** at the top of the page turns amber when no new
+build has arrived for 6+ hours. Then:
+
+1. **Open the Actions tab → *Build & deploy Tech Deck*.** If it says *"This
+   scheduled workflow is disabled because there hasn't been activity in this
+   repository for at least 60 days"*, click **Enable workflow**. GitHub does
+   this to public repos with no commits for 60 days, and scheduled runs don't
+   count as activity. The `keepalive` job in `deploy.yml` re-enables the
+   workflow on every scheduled run to stop this happening, but the button is
+   the fix if it ever does.
+2. **Click *Run workflow*** for an instant refresh. Don't use *Re-run* on an old
+   run: it replays that run's old code and workflow file exactly, so it never
+   picks up newer changes (and it can't run at all while the workflow is
+   disabled).
+3. **Check the latest run's Summary page.** The feed table there, and any yellow
+   *Feed problem* warnings, show which sources failed and why (e.g. `HTTP 403`
+   means the site is blocking the feed).
