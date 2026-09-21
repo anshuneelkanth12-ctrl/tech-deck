@@ -8,7 +8,7 @@ name: Build & deploy Tech Deck
 #   • whenever you click "Run workflow" on the Actions tab (manual refresh)
 on:
   schedule:
-        - cron: "*/15 * * * *"
+        - cron: "7,22,37,52 * * * *"
   push:
     branches: [main]
   workflow_dispatch:
@@ -66,7 +66,7 @@ jobs:
 
   deploy:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
