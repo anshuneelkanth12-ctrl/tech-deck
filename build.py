@@ -26,6 +26,7 @@ keyword lists below — nothing else needs to change.
 
 from __future__ import annotations
 
+import calendar
 import concurrent.futures
 import html
 import json
@@ -86,22 +87,32 @@ SOURCES = [
 # ---------------------------------------------------------------------------
 # 2. CATEGORY RULES  —  case-insensitive keyword match on title + summary.
 # ---------------------------------------------------------------------------
+# 2. CATEGORY RULES  —  whole-word keyword match on title + summary.
+#    A keyword only counts as a whole word: "ai" matches "AI" but not "said",
+#    "trai" matches "TRAI" but not "training", "ios" matches "iOS" but not
+#    "studios". A plural "s" is allowed automatically ("chip" -> "chips").
+#    Keywords are case-insensitive, EXCEPT ones you type with a capital letter:
+#    those must match exactly — e.g. "Vi" (the Indian carrier) won't catch the
+#    "VI" in "GTA VI".
+# ---------------------------------------------------------------------------
 KW_PHONE = [
     "apple", "iphone", "ipad", "samsung", "galaxy", "oneplus", "oppo", "vivo",
-    "xiaomi", "redmi", "realme", "poco", "pixel", "nothing", "motorola", "moto ",
-    "huawei", "honor", "foldable", "snapdragon", "mediatek", "tensor", "android",
-    "ios", "smartphone", "phone", "camera phone", "battery",
+    "xiaomi", "redmi", "realme", "poco", "pixel", "nothing phone", "nothing os",
+    "nothing ear", "cmf phone", "carl pei", "motorola", "moto", "huawei", "honor",
+    "foldable", "snapdragon", "mediatek", "tensor", "android", "ios",
+    "smartphone", "phone", "camera phone", "battery",
 ]
 KW_INDIA = [
-    "india", "indian", "₹", "rupee", "lakh", "crore", "bis", "uidai", "aadhaar",
-    "jio", "airtel", "vodafone idea", " vi ", "trai",
+    "india", "indian", "₹", "rupee", "lakh", "crore", "bis certification",
+    "bis listing", "bureau of indian standards", "uidai", "aadhaar", "jio",
+    "jiohotstar", "airtel", "vodafone idea", "Vi", "trai",
 ]
 KW_AI = [
-    "ai", "artificial intelligence", "llm", "gpt", "gemini", "claude", "anthropic",
-    "openai", "chip", "semiconductor", "gpu", "fab", "data center", "datacenter",
-    "quantum", "policy", "regulation", "antitrust",
+    "ai", "genai", "artificial intelligence", "llm", "gpt", "chatgpt", "gemini",
+    "claude", "anthropic", "openai", "chip", "chipmaker", "semiconductor", "gpu",
+    "fab", "data center", "datacenter", "quantum", "policy", "regulation",
+    "antitrust",
 ]
-
 # ---------------------------------------------------------------------------
 # 3. SETTINGS
 # ---------------------------------------------------------------------------
@@ -139,7 +150,50 @@ SESSION.headers.update({
 # ---------------------------------------------------------------------------
 def log(msg: str) -> None:
     print(msg, flush=True)
+# Per-feed results for this run, shown as a table on the GitHub Actions run page.
+FEED_REPORT: list[dict] = []
+IN_GITHUB_ACTIONS = os.environ.get("GITHUB_ACTIONS") == "true"
 
+
+def feed_ok(name: str, count: int) -> None:
+    """Record a feed that delivered stories."""
+    FEED_REPORT.append({"name": name, "count": count, "note": ""})
+    log(f"  · {name:18} — {count} entries")
+
+
+def feed_problem(name: str, why: str) -> None:
+    """Record a feed that gave us nothing. On GitHub this also becomes a yellow
+    warning in the run's Annotations box, so a dead feed can't hide behind a
+    green tick."""
+    FEED_REPORT.append({"name": name, "count": 0, "note": why})
+    log(f"  · {name:18} — {why} (skipped)")
+    if IN_GITHUB_ACTIONS:
+        print(f"::warning title=Feed problem: {name}::{name} returned no stories this run ({why}).",
+              flush=True)
+
+
+def write_run_summary(articles, seconds: float) -> None:
+    """On GitHub, show a small feed-health table right on the run's Summary
+    page, so you can see which sources worked without opening the logs."""
+    path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if not path:
+        return
+    working = sum(1 for f in FEED_REPORT if f["count"])
+    lines = [
+        f"### Tech Deck: {len(articles)} stories published",
+        f"{working} of {len(FEED_REPORT)} feeds delivered stories · built in {seconds:.0f}s",
+        "",
+        "| Feed | Result |",
+        "|---|---|",
+    ]
+    for f in sorted(FEED_REPORT, key=lambda f: (f["count"] > 0, f["name"])):
+        result = f"{f['count']} stories" if f["count"] else f"⚠️ {f['note']}"
+        lines.append(f"| {f['name']} | {result} |")
+    try:
+        with open(path, "a", encoding="utf-8") as fh:
+            fh.write("\n".join(lines) + "\n")
+    except OSError:
+        pass
 
 def clean_text(raw: str, limit: int | None = None) -> str:
     """Strip HTML, unescape entities, collapse whitespace, optionally trim."""
@@ -160,7 +214,7 @@ def entry_datetime(entry) -> datetime:
         st = entry.get(key)
         if st:
             try:
-                return datetime.fromtimestamp(time.mktime(st), tz=timezone.utc)
+                return datetime.fromtimestamp(calendar.timegm(st), tz=timezone.utc)
             except (ValueError, OverflowError):
                 pass
     return datetime.now(timezone.utc)
@@ -216,12 +270,39 @@ def fetch_og_image(url: str) -> str | None:
     return None
 
 
+def keyword_matcher(words):
+    """Turn a keyword list into one whole-word test (see CATEGORY RULES).
+
+    The old plain-substring check misfiled lots of stories: "ai" is inside
+    "said" and "again", "trai" inside "training" (so AI stories got an India
+    flag), "oppo" inside "opportunity", "ios" inside "studios"."""
+    def pattern(word):
+        body = r"\s+".join(re.escape(part) for part in word.split())
+        left = r"(?<!\w)" if re.match(r"\w", word[0]) else ""        # "₹" needs no edge
+        right = r"(?:e?s)?(?!\w)" if re.match(r"\w", word[-1]) else ""
+        return left + body + right
+
+    loose = [w for w in words if w == w.lower()]
+    exact = [w for w in words if w != w.lower()]               # typed with capitals
+    checks = []
+    if loose:
+        checks.append(re.compile("|".join(map(pattern, loose)), re.IGNORECASE))
+    if exact:
+        checks.append(re.compile("|".join(map(pattern, exact))))
+    return lambda text: any(rx.search(text) for rx in checks)
+
+
+IS_PHONE = keyword_matcher(KW_PHONE)
+IS_INDIA = keyword_matcher(KW_INDIA)
+IS_AI    = keyword_matcher(KW_AI)
+
+
 def categorize(title: str, summary: str, india_source: bool):
     """Return (primary_category, india_flag) per the category rules."""
-    blob = f"{title} {summary}".lower()
-    is_phone = any(k in blob for k in KW_PHONE)
-    is_india = any(k in blob for k in KW_INDIA) or india_source
-    is_ai    = any(k in blob for k in KW_AI)
+    blob = f"{title} {summary}"
+    is_phone = IS_PHONE(blob)
+    is_india = india_source or IS_INDIA(blob)
+    is_ai    = IS_AI(blob)
 
     if is_phone:
         primary = "phone"
@@ -285,7 +366,7 @@ def collect_articles():
             feed = feedparser.parse(resp.content)
             entries = feed.entries[:PER_FEED_LIMIT]
             if not entries:
-                log(f"  · {src['name']:18} — 0 entries (skipped)")
+                feed_problem(src["name"], f"HTTP {resp.status_code}" if resp.status_code >= 400 else "feed was empty or unreadable")
                 continue
             for e in entries:
                 title = clean_text(e.get("title", ""))
@@ -308,9 +389,9 @@ def collect_articles():
                     "paywall": src.get("paywall", False),
                     "_dt": entry_datetime(e),
                 })
-            log(f"  · {src['name']:18} — {len(entries)} entries")
+            feed_ok(src["name"], len(entries))
         except requests.RequestException as ex:
-            log(f"  · {src['name']:18} — FETCH FAILED ({type(ex).__name__})")
+            feed_problem(src["name"], f"could not connect: {type(ex).__name__}")
     return articles
 
 
@@ -484,7 +565,7 @@ def main():
         by_cat[a["cat"]] = by_cat.get(a["cat"], 0) + 1
     log(f"\nWrote {OUTPUT} — {len(articles)} stories "
         f"({with_img} with images) in {time.time() - start:.1f}s")
-    log(f"By category: {by_cat}")
+    log(f"By category: {by_cat}")write_run_summary(articles, time.time() - start)
 
 
 if __name__ == "__main__":
