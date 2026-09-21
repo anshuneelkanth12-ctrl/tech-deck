@@ -565,7 +565,8 @@ def main():
         by_cat[a["cat"]] = by_cat.get(a["cat"], 0) + 1
     log(f"\nWrote {OUTPUT} — {len(articles)} stories "
         f"({with_img} with images) in {time.time() - start:.1f}s")
-    log(f"By category: {by_cat}")write_run_summary(articles, time.time() - start)
+    log(f"By category: {by_cat}")
+    write_run_summary(articles, time.time() - start)
 
 
 if __name__ == "__main__":
